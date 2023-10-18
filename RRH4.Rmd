@@ -1,0 +1,160 @@
+---
+title: "H5"
+output: html_document
+date: "2023-10-16"
+---
+```{r}
+#Reading from Excel
+library(readxl)
+bike <- read_excel("/Users/wangd07/Desktop/text_data.xlsx")
+class(bike)
+str(bike)
+library(data.table)
+setDT(bike)
+class (bike)
+#Set data table
+df=bike[(passholder_type=='Monthly Pass'),.(start_time,duration)]
+df
+
+#Convert time series
+data = ts(df$duration, start= c(2018) , end = c(2022,12),frequency = 12)
+data
+plot(data)
+```
+
+```{r}
+library(fpp)
+library(fpp2)
+library(TTR)
+library(ggplot2)
+# Forecasting Methods
+Acf(data)
+#take Mean of all available history
+
+mean_forecast <- meanf(data,5)
+plot(mean_forecast)
+
+# Naive Method
+naive_forecast <- naive(data,5)
+plot(naive_forecast)
+# Seasonal Naive
+snaive_forecast <- snaive(data,5)
+plot(snaive_forecast)
+# Random Walk with a drift
+rwf_forecast <- rwf(data,5)
+rwf_forecast <- rwf(data,5, drift=TRUE)
+plot(rwf_forecast)
+# Moving Averages
+MA5_forecast <- ma(data,order=5)
+lines(MA5_forecast,col="pink")
+MA9_forecast <- ma(data,order=9)
+
+#Use par(new=TRUE) as an Alternative:
+#plot(mean_forecast)
+#par(new=TRUE)
+#plot(naive_forecast$mean, type="l", col="pink", axes=FALSE, ann=FALSE)
+#par(new=TRUE)
+#plot(rwf_forecast$mean, type="l", col="green", axes=FALSE, ann=FALSE)
+
+attributes(naive_forecast)
+lines(rwf_forecast$mean,col="green")#Error in plot.xy(xy.coords(x, y), type = type, ...) : plot.new has not been called yet?
+lines(snaive_forecast$mean,col="black")
+lines(naive_forecast$mean,col="red")
+
+# Decomposition
+ets_forecast <- ets(data)
+plot(ets_forecast)
+attributes(ets_forecast)
+ets_forecast$mse
+
+# HoltWinters
+HW_forecast <- HoltWinters(data)
+plot(HW_forecast)
+#HW_forecast <- HoltWinters(df$duration)#Error in decompose(ts(x[1L:wind], start = start(x), frequency = f), seasonal) : time series has no or less than 2 periods
+#duration_ts <- ts(data, frequency = 12) # Adjust frequency as needed
+#HW_forecast <- HoltWinters(duration_ts)
+
+
+#SSE
+SSE_Simple <- HoltWinters(data,beta=FALSE,gamma=FALSE)
+attributes(SSE_Simple)
+plot(SSE_Simple)
+SSE_Simple$SSE
+head(SSE_Simple$fitted)
+
+#Forecast
+forecast_ets_1 <- forecast.ets(ets_forecast, h=5)
+plot(forecast_ets_1)
+forecast_ets_2 <- forecast(ets_forecast, h=5)
+plot(forecast_ets_2)
+```
+
+
+```{r}
+#plot all of these togather
+plot(mean_forecast)
+lines(naive_forecast$mean,col="pink")#Error in plot.xy(xy.coords(x, y), type = type, ...) : plot.new has not been called yet?
+lines(rwf_forecast$mean,col="green")
+lines(snaive_forecast$mean,col="black")
+lines(MA5_forecast,col="orange")
+lines(MA9_forecast,col="blue")
+lines(ets_forecast$mean,col="purple")
+lines(HW_forecast$mean,col="red")
+lines(forecast_ets_1$mean,col="yellow")
+lines(SSE_Simple$mean,col="grey")
+lines(forecast_ets_2$mean,col="brown")
+
+```
+
+```{r}
+#Accuracy
+accuracy(mean_forecast)
+accuracy(naive_forecast)
+accuracy(snaive_forecast)
+accuracy(rwf_forecast)
+
+accuracy(ets_forecast)
+
+accuracy(forecast_ets_1)
+accuracy(forecast_ets_2)
+```
+
+
+```{r}
+#accuracy(MA5_forecast)#Error in `accuracy.default()`:! Unable to compute forecast accuracy measures  Backtrace:   1. generics::accuracy(MA5_forecast) 2. forecast:::accuracy.default(MA5_forecast)  Execution halted
+#accuracy(MA9_forecast)#Do note that the beginning and end of the series produced by ma() will have NA values because of the moving average calculation, so you'd need to handle that.
+
+#accuracy(SSE_Simple)
+#accuracy(HW_forecast)
+
+accuracy_ma5 <- accuracy(MA5_forecast[3:(length(MA5_forecast)-2)], data[3:(length(data)-2)])#handle NA values for this comparison
+accuracy_ma9 <- accuracy(MA9_forecast[5:(length(MA9_forecast)-4)], data[5:(length(data)-4)])
+accuracy_ma5
+accuracy_ma9
+
+
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
